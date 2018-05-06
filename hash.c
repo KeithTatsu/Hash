@@ -26,7 +26,10 @@ static unsigned long sdbm(unsigned char *str)
         return hash;
     }
 */
+<<<<<<< HEAD
 
+=======
+>>>>>>> d922a7acd44a5ea102a65e16f463fd9c7175a7ed
 typedef struct hash{
 	lista_t** tabla;
 	size_t tamanio;

@@ -71,13 +71,14 @@ void _asignar_primer_nodo(lista_t* lista,nodo_t* nodo){
 	lista->ult = nodo;
 }
 
-bool lista_insertar_primero(lista_t* lista, void* dato){
+bool lista_insertar_primero(lista_t* lista, void* dato,char* contraseña){
 
 	nodo_t* nodo_nuevo = nodo_crear();
 	
 	if (nodo_nuevo == NULL) return false;
 
 	nodo_nuevo->valor = dato;
+	nodo_nuevo->clave = contraseña;
 
 	if (lista_esta_vacia(lista)){
 		_asignar_primer_nodo(lista,nodo_nuevo);
@@ -91,13 +92,14 @@ bool lista_insertar_primero(lista_t* lista, void* dato){
 	return true;
 }
 
-bool lista_insertar_ultimo(lista_t* lista, void* dato){
+bool lista_insertar_ultimo(lista_t* lista, void* dato, char* contraseña){
 
 	nodo_t* nodo_nuevo =nodo_crear();
 	
 	if (!nodo_nuevo) return false;
 
 	nodo_nuevo->valor = dato;
+	nodo_nuevo->clave = contraseña;
 
 	if (lista_esta_vacia(lista)){
 		_asignar_primer_nodo(lista,nodo_nuevo);
@@ -124,7 +126,7 @@ void* lista_ver_ultimo(const lista_t* lista){
 	return lista->ult->valor;
 }
 
-void* lista_borrar_primero(lista_t* lista){
+void* lista_borrar_primero(lista_t* lista){ //Aca nos faltaria saber la cuestion de la clave que hacer
 	
 	if(lista_esta_vacia(lista)) return NULL;
 	
@@ -147,7 +149,7 @@ size_t lista_largo(const lista_t* lista){
 /* *****************************************************************
  *                    PRIMITIVAS ITERADORES DE EXTERNO
  * *****************************************************************/
-lista_iter_t* lista_iter_crear(lista_t *lista){
+lista_iter_t* lista_iter_crear(lista_t *lista){ //Todo los iteradores ahora ya no sirve pues lo nodos tiene clave
 	
 	lista_iter_t* lista_iter = malloc(sizeof(lista_iter_t));
 
