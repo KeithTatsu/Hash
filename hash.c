@@ -48,6 +48,22 @@ typedef struct hash_iter{
 	lista_iter_t* iter_actual;
 }hash_iter_t;
 
+void* recorrer_hash(lista_t* lista, char* clave){
+
+	lista_iter_t* iter_lista = lista_iter_crear(lista);
+
+	if(!lista_iter) return NULL;
+
+	while(!lista_iter_al_final(iter_lista)){
+		if(strcmp(lista_iter_ver_actual(iter_lista), clave) == 0){
+			lista_iter_destruir(iter_lista);
+			return //COMO DEVOLVER DATO?
+		}
+	}
+
+	return NULL;
+}
+
 hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 
 	hash_t* hash_nuevo = malloc(TAM_INICIAL*sizeof(hash_t));
@@ -71,6 +87,9 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 
+	unsigned int pos = hash_f(clave);	//hash_f es la función de hash
+
+	return lista_insertar_ultimo(hash[pos]->tabla, dato, clave);
 }
 
 void *hash_borrar(hash_t *hash, const char *clave){
@@ -79,10 +98,18 @@ void *hash_borrar(hash_t *hash, const char *clave){
 
 void *hash_obtener(const hash_t *hash, const char *clave){
 
+	unsigned int pos = hash_f(clave);
+
+	void* valor = recorrer_hash(hash[pos]->tabla, clave);
+
+	return valor;
 }
 
 bool hash_pertenece(const hash_t *hash, const char *clave){
 
+	unsigned int pos = hashf(clave);
+
+	return recorrer_hash(hash[pos]->tabla, clave) != NULL;
 }
 
 size_t hash_cantidad(const hash_t *hash){
@@ -92,6 +119,18 @@ size_t hash_cantidad(const hash_t *hash){
 
 void hash_destruir(hash_t *hash){
 
+	void* dato;
+
+	for(size_t i = 0; i < hash->tamanio; i++){
+		while(!lista_esta_vacia(hash[i]->tabla)){
+			dato = lista_borrar_primero(hash[i]->tabla);
+			if(hash[i]->destruir != NULL){
+				free(dato);
+			}
+		}
+	}
+
+	free(hash);
 }
 
 /*ITERADOR*/
