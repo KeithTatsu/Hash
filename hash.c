@@ -1,4 +1,45 @@
+#include "hash.h"
 
+/* POSIBLES FUNCIONES HASH
+
+static unsigned long sdbm(unsigned char *str)
+    {
+        unsigned long hash = 0;
+        int c;
+
+        while (c = *str++)
+            hash = c + (hash << 6) + (hash << 16) - hash;
+
+        return hash;
+    }
+ unsigned long hash(unsigned char *str)
+    {
+        unsigned long hash = 5381;
+        int c;
+
+        while (c = *str++)
+            hash = ((hash << 5) + hash) + c; // hash * 33 + c 
+
+        return hash;
+    }
+*/
+
+typedef struct nodo{
+	char* clave;
+	void* dato;
+}nodo_t;
+
+typedef struct hash{
+	lista_t** tabla;
+	size_t tamanio;
+	size_t ocupados;
+}hash_t;
+
+typedef struct hash_iter{
+	size_t pos;
+	const hash_t* hash;
+	lista_iter_t* iter; //PROX? ITER_ACTUAL?
+}hash_iter_t;
 
 hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 
@@ -47,5 +88,5 @@ bool hash_iter_al_final(const hash_iter_t *iter){
 }
 
 void hash_iter_destruir(hash_iter_t* iter){
-	
+
 }
