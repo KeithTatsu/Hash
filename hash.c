@@ -33,6 +33,7 @@ typedef struct hash{
 	lista_t** tabla;
 	size_t tamanio;
 	size_t ocupados;
+	hash_destruir_dato_t destruir;
 }hash_t;
 
 typedef struct hash_iter{
@@ -63,6 +64,7 @@ bool hash_pertenece(const hash_t *hash, const char *clave){
 
 size_t hash_cantidad(const hash_t *hash){
 
+	return hash->ocupados;
 }
 
 void hash_destruir(hash_t *hash){
