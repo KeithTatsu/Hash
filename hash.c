@@ -23,12 +23,6 @@ static unsigned long sdbm(unsigned char *str)
         return hash;
     }
 */
-
-typedef struct nodo{
-	char* clave;
-	void* dato;
-}nodo_t;
-
 typedef struct hash{
 	lista_t** tabla;
 	size_t tamanio;

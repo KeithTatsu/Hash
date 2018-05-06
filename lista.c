@@ -9,6 +9,7 @@
 
 typedef struct nodo {
     void* valor;
+    char* clave;
     struct nodo* prox;
 }nodo_t;
 /******************************************************************/
