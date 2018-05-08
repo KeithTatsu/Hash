@@ -47,6 +47,18 @@ typedef struct hash_iter{
 	lista_iter_t* iter_actual;
 }hash_iter_t;
 
+nodo_t* crear_nodo(char* clave, void* dato){
+
+	nodo_t* nodo_nuevo = malloc(sizeof(nodo_t));
+
+	if(!nodo_nuevo) return NULL;
+
+	nodo_nuevo->clave = clave;
+	nodo_nuevo->dato = dato;
+
+	return nodo_nuevo;
+}
+
 void* buscar_clave(lista_t* lista, char* clave){
 
 	nodo_t* nodo_actual;
@@ -111,7 +123,7 @@ void *hash_obtener(const hash_t *hash, const char *clave){
 
 bool hash_pertenece(const hash_t *hash, const char *clave){
 
-	unsigned int pos = hashf(clave);
+	unsigned int pos = hash_f(clave);
 
 	return buscar_clave(hash[pos]->tabla, clave) != NULL;
 }
