@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include "hash.h"
 
 #define TAM_INICIAL 20 //SE PUEDE MODIFICAR
@@ -26,10 +27,13 @@ static unsigned long sdbm(unsigned char *str)
         return hash;
     }
 */
-<<<<<<< HEAD
 
-=======
->>>>>>> d922a7acd44a5ea102a65e16f463fd9c7175a7ed
+//SE PUEDE MODIFICAR A UN NOMBRE MAS DESCRIPTIVO
+typedef struct nodo{
+	char* clave;
+	void* dato;
+}nodo_t;
+
 typedef struct hash{
 	lista_t** tabla;
 	size_t tamanio;
@@ -45,14 +49,15 @@ typedef struct hash_iter{
 
 void* buscar_clave(lista_t* lista, char* clave){
 
+	nodo_t* nodo_actual;
 	lista_iter_t* iter_lista = lista_iter_crear(lista);
 
 	if(!lista_iter) return NULL;
 
 	while(!lista_iter_al_final(iter_lista)){
-		if(strcmp(lista_iter_ver_actual(iter_lista), clave) == 0){
-			lista_iter_destruir(iter_lista);
-			return //COMO DEVOLVER DATO?
+		nodo_actual = lista_iter_ver_actual(iter_lista);
+		if(strcmp(nodo_actual->clave, clave) == 0){
+			return nodo_actual->dato;
 		}
 	}
 
@@ -82,9 +87,13 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 
+	nodo_t* nodo = crear_nodo(clave, dato);
+
+	if(!nodo) return false;
+
 	unsigned int pos = hash_f(clave);	//hash_f es la función de hash
 
-	return lista_insertar_ultimo(hash[pos]->tabla, dato, clave);
+	return lista_insertar_ultimo(hash[pos]->tabla, nodo);
 }
 
 void *hash_borrar(hash_t *hash, const char *clave){
@@ -114,14 +123,15 @@ size_t hash_cantidad(const hash_t *hash){
 
 void hash_destruir(hash_t *hash){
 
-	void* dato;
+	nodo_t* nodo;
 
 	for(size_t i = 0; i < hash->tamanio; i++){
 		while(!lista_esta_vacia(hash[i]->tabla)){
-			dato = lista_borrar_primero(hash[i]->tabla);
+			nodo = lista_borrar_primero(hash[i]->tabla);
 			if(hash[i]->destruir != NULL){
-				free(dato);
+				free(nodo->dato);
 			}
+			free(nodo);
 		}
 	}
 
