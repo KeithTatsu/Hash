@@ -152,22 +152,51 @@ void hash_destruir(hash_t *hash){
 
 /*ITERADOR*/
 
-hash_iter_t *hash_iter_crear(const hash_t *hash){
+hash_iter_t *hash_iter_crear(const hash_t* hash){
+	
+	hash_iter_t* hash_iter = malloc(sizeof(hash_iter_t));
+	if (!hash_iter) return NULL;
 
+	hash_iter->hash = hash;
+	hash_iter->pos = 0; //Esto no se si lo estoy haciendo bien
+	hash_iter->iter_actual = lista_iter_crear(hash->tabla[pos]);
+	
+	if (!hash_iter->iter_actual){
+		free(hash_iter);
+		return NULL;
+	}
+
+	return hash_iter;
 }
 
-bool hash_iter_avanzar(hash_iter_t *iter){
+bool hash_iter_avanzar(hash_iter_t* iter){
+	if(iter->hash->tamanio < iter->pos)return false;//Aca creo que es tamaño
+	
+	free(iter->iter_actual);
+	/*++ iter->pos;
+	iter->hash->iter_actual = lista_iter_crear(iter->hash->tabla[pos]);*///Creo que aca deberia ir buscando todas las casillas del hash
+																	// hasta encontrar una lista ,porque si no apuntaria a Null	
+	do{//Asi
+		++iter->pos;
+		if(iter->hash->tabla[iter->pos]){
+			iter->iter_actual = lista_iter_crear(iter->hash->tabla[pos]);
+			return true;
+		}
+	}while(iter->pos < iter->hash->tamanio);//Pos se cuenta desde cero por ende no es  menor igual
 
+	return false; 
 }
 
 const char *hash_iter_ver_actual(const hash_iter_t *iter){
-
+	nodo_t* campo = lista_iter_ver_actual(iter->iter_actual);//lisya_iter_ver_actual cumple condicion de const
+	return campo->clave;
 }
 
-bool hash_iter_al_final(const hash_iter_t *iter){
-
+bool hash_iter_al_final(const hash_iter_t* iter){
+	return(iter->pos == iter->hash->tamanio);
 }
 
 void hash_iter_destruir(hash_iter_t* iter){
-
+	free(iter->iter_actual);
+	free(iter);
 }
