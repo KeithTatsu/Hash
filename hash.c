@@ -158,7 +158,7 @@ hash_iter_t *hash_iter_crear(const hash_t* hash){
 	if (!hash_iter) return NULL;
 
 	hash_iter->hash = hash;
-	hash_iter->pos = 0; //Esto no se si lo estoy haciendo bien
+	hash_iter->pos = 0; //Esto no se si lo estoy haciendo bien , creo que deberia ir buscando la primera lista del hash
 	hash_iter->iter_actual = lista_iter_crear(hash->tabla[pos]);
 	
 	if (!hash_iter->iter_actual){
