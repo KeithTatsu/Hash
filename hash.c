@@ -33,7 +33,7 @@ size_t hash_f(const char *clave, size_t tam){
 		i++;
 	}
 
-	return hash_v;
+	return hash_v%tam;
 }
 
 //SE PUEDE MODIFICAR A UN NOMBRE MAS DESCRIPTIVO
@@ -124,6 +124,30 @@ hash_t* redimensionar_hash(hash_t* hash_viejo, size_t tam_nuevo){
 	return hash_nuevo;
 }
 
+bool insertar_existente(lista_t* tabla, nodo_t* campo, hash_destruir_dato_t destruir){
+
+	lista_iter_t* iter_lista = lista_iter_crear(tabla);
+
+	if(!iter_lista) return false;
+
+	while(!lista_iter_al_final(iter_lista)){
+		nodo_t* campo_actual = lista_iter_ver_actual(iter_lista);
+		if(strcmp(campo_actual->clave, campo->clave) == 0){
+			nodo_t* campo_aux = lista_iter_borrar(iter_lista);
+			if(destruir){
+				destruir(campo_aux->dato);
+			}
+			if(!lista_iter_insertar(iter_lista, campo)){
+				return false;
+			}
+			return true;
+		}
+		lista_iter_avanzar(iter_lista);
+	}
+
+	return false;
+}
+
 nodo_t* crear_nodo(const char* clave, void* dato){
 
 	nodo_t* nodo_nuevo = malloc(sizeof(nodo_t));
@@ -136,7 +160,7 @@ nodo_t* crear_nodo(const char* clave, void* dato){
 	return nodo_nuevo;
 }
 
-void* buscar_clave(lista_t* tabla, const char* clave){
+nodo_t* buscar_clave(lista_t* tabla, const char* clave){
 
 	nodo_t* nodo_actual;
 	lista_iter_t* iter_lista = lista_iter_crear(tabla);
@@ -147,8 +171,9 @@ void* buscar_clave(lista_t* tabla, const char* clave){
 		nodo_actual = lista_iter_ver_actual(iter_lista);
 		if(strcmp(nodo_actual->clave, clave) == 0){
 			lista_iter_destruir(iter_lista);
-			return nodo_actual->dato;
+			return nodo_actual;
 		}
+		lista_iter_avanzar(iter_lista);
 	}
 
 	return NULL;
@@ -179,17 +204,24 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 }
 
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
-
+/**
 	if((100*hash->ocupados)/hash->tamanio >= PORCENTAJE_AGRANDAR){
 		size_t tam_nuevo = hash->tamanio*TAM_AGRANDAR;
-		hash = redimensionar_hash(hash, tam_nuevo);
+		redimensionar_hash(hash, tam_nuevo);
 	}
-
+**/
 	nodo_t* campo = crear_nodo(clave, dato);
 
 	if(!campo) return false;
 
 	size_t pos = hash_f(clave, hash->tamanio);	//hash_f es la función de hash
+
+	if(hash_pertenece(hash, clave)){
+		if(!insertar_existente(hash->tabla[pos], campo, hash->destruir)){
+			return false;
+		}
+		return true;
+	}
 
 	if(!lista_insertar_ultimo(hash->tabla[pos], campo)){
 		return false;
@@ -202,7 +234,7 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 
 void *hash_borrar(hash_t *hash, const char *clave){
 
-	if(!hash || hash->ocupados == 0) return NULL; //POR LAS DUDAS, VERIFICAR CON LAS PRUEBAS
+	if(!hash || hash->ocupados == 0) return NULL;
 
 	if((100*hash->ocupados)/hash->tamanio <= PORCENTAJE_ACHICAR){
 		if(hash->tamanio > TAM_INICIAL){
@@ -222,8 +254,9 @@ void *hash_borrar(hash_t *hash, const char *clave){
 		if(strcmp(campo->clave, clave) == 0){
 			lista_iter_borrar(iter_lista);
 			hash->ocupados--;
-			return campo->dato; //VERIFICAR QUE NO DEVUELVA BASURA
+			return campo->dato;
 		}
+		lista_iter_avanzar(iter_lista);
 	}
 
 	return NULL;
@@ -235,9 +268,11 @@ void *hash_obtener(const hash_t *hash, const char *clave){
 
 	size_t pos = hash_f(clave, hash->tamanio);
 
-	void* valor = buscar_clave(hash->tabla[pos], clave);
+	nodo_t* campo = buscar_clave(hash->tabla[pos], clave);
 
-	return valor;
+	if(!campo) return NULL;
+
+	return campo->dato;
 }
 
 bool hash_pertenece(const hash_t *hash, const char *clave){
@@ -246,7 +281,11 @@ bool hash_pertenece(const hash_t *hash, const char *clave){
 
 	size_t pos = hash_f(clave, hash->tamanio);
 
-	return (buscar_clave(hash->tabla[pos], clave) != NULL);
+	nodo_t* campo = buscar_clave(hash->tabla[pos], clave);
+
+	if(!campo) return false;
+
+	return true;
 }
 
 size_t hash_cantidad(const hash_t *hash){
@@ -309,12 +348,18 @@ bool hash_iter_avanzar(hash_iter_t* iter){
 }
 
 const char *hash_iter_ver_actual(const hash_iter_t *iter){
+
+	if(lista_iter_al_final(iter->iter_actual)) return NULL; //hash_iter_al_final
+
 	nodo_t* campo = lista_iter_ver_actual(iter->iter_actual);//lisya_iter_ver_actual cumple condicion de const
 	return campo->clave;
 }
 
 bool hash_iter_al_final(const hash_iter_t* iter){
-	return(iter->pos == iter->hash->tamanio);
+	
+	return(iter->pos == iter->hash->ocupados);
+	//hash->tamanio es "fijo" y puede no ser igual a la cantidad de elementos en el hash
+	//MODIFICAR
 }
 
 void hash_iter_destruir(hash_iter_t* iter){
