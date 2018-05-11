@@ -3,7 +3,7 @@
 #include "lista.h"
 #include "hash.h"
 
-#define TAM_INICIAL 20 //SE PUEDE MODIFICAR
+#define TAM_INICIAL 41 //SE PUEDE MODIFICAR
 #define TAM_AGRANDAR 2
 #define TAM_ACHICAR 4
 #define PORCENTAJE_AGRANDAR 70
@@ -37,10 +37,10 @@ size_t hash_f(const char *clave, size_t tam){
 }
 
 //SE PUEDE MODIFICAR A UN NOMBRE MAS DESCRIPTIVO
-typedef struct nodo{
+typedef struct campo{
 	const char* clave;
 	void* dato;
-}nodo_t;
+}campo_t;
 
 struct hash{
 	lista_t** tabla;
@@ -79,7 +79,7 @@ bool pasar_datos(hash_t* hash_viejo, hash_t* hash_nuevo){
 		if(!iter_lista) return false;
 
 		while(!lista_iter_al_final(iter_lista)){
-			nodo_t* campo = lista_iter_ver_actual(iter_lista);
+			campo_t* campo = lista_iter_ver_actual(iter_lista);
 			if(!hash_guardar(hash_nuevo, campo->clave, campo->dato)){
 				return false;
 			}
@@ -94,46 +94,50 @@ bool pasar_datos(hash_t* hash_viejo, hash_t* hash_nuevo){
 	return true;
 }
 
-hash_t* redimensionar_hash(hash_t* hash_viejo, size_t tam_nuevo){
+hash_t* redimensionar_hash(hash_t* hash, size_t tam_nuevo){
 
 	hash_t* hash_nuevo = malloc(sizeof(hash_t));
 
-	if(!hash_nuevo)	return hash_viejo;
+	if(!hash_nuevo)	return hash;
 
 	hash_nuevo->tabla = malloc(tam_nuevo*sizeof(lista_t*));
 
 	if(!hash_nuevo->tabla){
 		free(hash_nuevo);
-		return hash_viejo;
+		return hash;
 	}
 
 	if(!inicializar_tabla(hash_nuevo, tam_nuevo)){
-		return hash_viejo;
+		return hash;
 	}
 
 	hash_nuevo->tamanio = tam_nuevo;
-	//PODRIA PASARSE EL HASH_VIEJO->OCUPADOS PERO EN PRINCIPIO NO HAY SEGURIDAD QUE PASEN TODOS LOS DATOS
 	hash_nuevo->ocupados = 0;
-	hash_nuevo->destruir = hash_viejo->destruir;
+	hash_nuevo->destruir = hash->destruir;
 
-	if(!pasar_datos(hash_viejo, hash_nuevo)){
+	if(!pasar_datos(hash, hash_nuevo)){
 		hash_destruir(hash_nuevo);
-		return hash_viejo;
+		return hash;
 	}
+
+	hash_t* hash_aux = hash;
+	hash = hash_nuevo;
+
+	hash_destruir(hash_aux);
 
 	return hash_nuevo;
 }
 
-bool insertar_existente(lista_t* tabla, nodo_t* campo, hash_destruir_dato_t destruir){
+bool insertar_existente(lista_t* tabla, campo_t* campo, hash_destruir_dato_t destruir){
 
 	lista_iter_t* iter_lista = lista_iter_crear(tabla);
 
 	if(!iter_lista) return false;
 
 	while(!lista_iter_al_final(iter_lista)){
-		nodo_t* campo_actual = lista_iter_ver_actual(iter_lista);
+		campo_t* campo_actual = lista_iter_ver_actual(iter_lista);
 		if(strcmp(campo_actual->clave, campo->clave) == 0){
-			nodo_t* campo_aux = lista_iter_borrar(iter_lista);
+			campo_t* campo_aux = lista_iter_borrar(iter_lista);
 			if(destruir){
 				destruir(campo_aux->dato);
 			}
@@ -148,30 +152,30 @@ bool insertar_existente(lista_t* tabla, nodo_t* campo, hash_destruir_dato_t dest
 	return false;
 }
 
-nodo_t* crear_nodo(const char* clave, void* dato){
+campo_t* crear_campo(const char* clave, void* dato){
 
-	nodo_t* nodo_nuevo = malloc(sizeof(nodo_t));
+	campo_t* campo_nuevo = malloc(sizeof(campo_t));
 
-	if(!nodo_nuevo) return NULL;
+	if(!campo_nuevo) return NULL;
 
-	nodo_nuevo->clave = clave;
-	nodo_nuevo->dato = dato;
+	campo_nuevo->clave = clave;
+	campo_nuevo->dato = dato;
 
-	return nodo_nuevo;
+	return campo_nuevo;
 }
 
-nodo_t* buscar_clave(lista_t* tabla, const char* clave){
+campo_t* buscar_clave(lista_t* tabla, const char* clave){
 
-	nodo_t* nodo_actual;
+	campo_t* campo_actual;
 	lista_iter_t* iter_lista = lista_iter_crear(tabla);
 
 	if(!iter_lista) return NULL;
 
 	while(!lista_iter_al_final(iter_lista)){
-		nodo_actual = lista_iter_ver_actual(iter_lista);
-		if(strcmp(nodo_actual->clave, clave) == 0){
+		campo_actual = lista_iter_ver_actual(iter_lista);
+		if(strcmp(campo_actual->clave, clave) == 0){
 			lista_iter_destruir(iter_lista);
-			return nodo_actual;
+			return campo_actual;
 		}
 		lista_iter_avanzar(iter_lista);
 	}
@@ -210,11 +214,11 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 		redimensionar_hash(hash, tam_nuevo);
 	}
 **/
-	nodo_t* campo = crear_nodo(clave, dato);
+	campo_t* campo = crear_campo(clave, dato);
 
 	if(!campo) return false;
 
-	size_t pos = hash_f(clave, hash->tamanio);	//hash_f es la función de hash
+	size_t pos = hash_f(clave, hash->tamanio);
 
 	if(hash_pertenece(hash, clave)){
 		if(!insertar_existente(hash->tabla[pos], campo, hash->destruir)){
@@ -250,7 +254,7 @@ void *hash_borrar(hash_t *hash, const char *clave){
 	if(!iter_lista) return NULL;
 
 	while(!lista_iter_al_final(iter_lista)){
-		nodo_t* campo = lista_iter_ver_actual(iter_lista);
+		campo_t* campo = lista_iter_ver_actual(iter_lista);
 		if(strcmp(campo->clave, clave) == 0){
 			lista_iter_borrar(iter_lista);
 			hash->ocupados--;
@@ -268,7 +272,7 @@ void *hash_obtener(const hash_t *hash, const char *clave){
 
 	size_t pos = hash_f(clave, hash->tamanio);
 
-	nodo_t* campo = buscar_clave(hash->tabla[pos], clave);
+	campo_t* campo = buscar_clave(hash->tabla[pos], clave);
 
 	if(!campo) return NULL;
 
@@ -281,11 +285,9 @@ bool hash_pertenece(const hash_t *hash, const char *clave){
 
 	size_t pos = hash_f(clave, hash->tamanio);
 
-	nodo_t* campo = buscar_clave(hash->tabla[pos], clave);
+	campo_t* campo = buscar_clave(hash->tabla[pos], clave);
 
-	if(!campo) return false;
-
-	return true;
+	return (campo != NULL);
 }
 
 size_t hash_cantidad(const hash_t *hash){
@@ -295,7 +297,7 @@ size_t hash_cantidad(const hash_t *hash){
 
 void hash_destruir(hash_t *hash){
 
-	nodo_t* campo;
+	campo_t* campo;
 
 	for(size_t i = 0; i < hash->tamanio; i++){
 		while(!lista_esta_vacia(hash->tabla[i])){
@@ -351,7 +353,7 @@ const char *hash_iter_ver_actual(const hash_iter_t *iter){
 
 	if(lista_iter_al_final(iter->iter_actual)) return NULL; //hash_iter_al_final
 
-	nodo_t* campo = lista_iter_ver_actual(iter->iter_actual);//lisya_iter_ver_actual cumple condicion de const
+	campo_t* campo = lista_iter_ver_actual(iter->iter_actual);//lisya_iter_ver_actual cumple condicion de const
 	return campo->clave;
 }
 
