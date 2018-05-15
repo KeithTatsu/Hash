@@ -13,3 +13,5 @@ valgrind: compile
 
 gdb: compile
 	gdb ./$(EXEC) -tui
+gui:compile
+	gdbgui ./$(EXEC)

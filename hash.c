@@ -139,7 +139,7 @@ bool inicializar_tabla(lista_t** tabla, size_t tam){
 
 	for(size_t i = 0; i < tam; i++){
 		tabla[i] = lista_crear();
-		if(!tabla[i]){
+		if(!tabla[i]){// esto anda ??
 			for(size_t j = i; j > 0; j--){
 				lista_destruir(tabla[j], NULL);
 			}
@@ -292,57 +292,62 @@ void hash_destruir(hash_t *hash){
 
 /*ITERADOR*/
 
+size_t _encontrar_lista_no_vacia(lista_t** tabla,size_t pos,size_t tamanio){
+	
+	size_t new_pos = pos;
+	while(lista_esta_vacia(tabla[new_pos])){
+		++new_pos;
+		if((tamanio-1) <= new_pos) return pos;// pos seria la ubicacion de la ultima lista, la misma, estoy al final
+	}
+	return new_pos;
+}
+
 hash_iter_t *hash_iter_crear(const hash_t* hash){
 	
 	hash_iter_t* hash_iter = malloc(sizeof(hash_iter_t));
 	if (!hash_iter) return NULL;
-
 	hash_iter->hash = hash;
-	hash_iter->pos = 0; //Esto no se si lo estoy haciendo bien , creo que deberia ir buscando la primera lista del hash
-	hash_iter->iter_actual = lista_iter_crear(hash->tabla[hash_iter->pos]);
-	
+
+	size_t i = _encontrar_lista_no_vacia(hash->tabla,0,hash->tamanio);// el cero , numero magico  usar define
+	hash_iter->pos = i;
+
+	hash_iter->iter_actual = lista_iter_crear(hash->tabla[i]);	
 	if (!hash_iter->iter_actual){
 		free(hash_iter);
 		return NULL;
 	}
-
 	return hash_iter;
 }
 
 bool hash_iter_avanzar(hash_iter_t* iter){
-	if(iter->hash->tamanio < iter->pos)return false;//Aca creo que es tamaño
-	//if(hash_iter_al_final(iter)) return false;
+	if(hash_iter_al_final(iter)) return false;		
 	
+	size_t new_pos = _encontrar_lista_no_vacia(iter->hash->tabla,iter->pos,iter->hash->tamanio);
+	if(new_pos == iter->pos) return false;//no puedo avanzar estoy al final
+		
+	lista_iter_t* lista_iter = lista_iter_crear(iter->hash->tabla[new_pos]);
+	if(!lista_iter) return false;
 	free(iter->iter_actual);
-	/*++ iter->pos;
-	iter->hash->iter_actual = lista_iter_crear(iter->hash->tabla[pos]);*///Creo que aca deberia ir buscando todas las casillas del hash
-																	// hasta encontrar una lista ,porque si no apuntaria a Null	
-	do{//Asi
-		++iter->pos;
-		if(iter->hash->tabla[iter->pos]){
-			iter->iter_actual = lista_iter_crear(iter->hash->tabla[iter->pos]);
-			return true;
-		}
-	}while(iter->pos < iter->hash->tamanio);//Pos se cuenta desde cero por ende no es  menor igual
-
-	return false; 
-}//re-hacer
-
+	iter->iter_actual = lista_iter;
+	iter->pos = new_pos;
+	return true;																
+}
 const char *hash_iter_ver_actual(const hash_iter_t *iter){
 
-	if(lista_iter_al_final(iter->iter_actual)) return NULL; //hash_iter_al_final
+	if(lista_iter_al_final(iter->iter_actual)) return NULL; //hash_iter_al_final <-- sebas no entiendo este comentario, que tiene que ver 
+	                                                        // si estoy al final del hash, lo que importa es si estoy al final de la lista
 
-	campo_t* campo = lista_iter_ver_actual(iter->iter_actual);//lista_iter_ver_actual cumple condicion de const
+	campo_t* campo =lista_iter_ver_actual(iter->iter_actual);
 	return campo->clave;
 }
 
 bool hash_iter_al_final(const hash_iter_t* iter){
-	
-	return(iter->pos == iter->hash->ocupados);
-	//MODIFICAR
+	size_t i = _encontrar_lista_no_vacia(iter->hash->tabla,iter->pos,iter->hash->tamanio);
+	if (i == iter->pos) return true;
+	return false;
 }
 
 void hash_iter_destruir(hash_iter_t* iter){
-	free(iter->iter_actual); //lista_iter_destruir
+	lista_iter_destruir(iter->iter_actual);
 	free(iter);
 }
