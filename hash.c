@@ -320,31 +320,35 @@ hash_iter_t *hash_iter_crear(const hash_t* hash){
 }
 
 bool hash_iter_avanzar(hash_iter_t* iter){
-	if(hash_iter_al_final(iter)) return false;		
+	if(hash_iter_al_final(iter)) return false;
 	
+	if(!lista_iter_al_final(iter->iter_actual)){
+		lista_iter_avanzar(iter->iter_actual);
+		return true;
+	}		
 	size_t new_pos = _encontrar_lista_no_vacia(iter->hash->tabla,iter->pos,iter->hash->tamanio);
-	if(new_pos == iter->pos) return false;//no puedo avanzar estoy al final
-		
 	lista_iter_t* lista_iter = lista_iter_crear(iter->hash->tabla[new_pos]);
 	if(!lista_iter) return false;
 	free(iter->iter_actual);
+	
 	iter->iter_actual = lista_iter;
 	iter->pos = new_pos;
 	return true;																
 }
 const char *hash_iter_ver_actual(const hash_iter_t *iter){
 
-	if(lista_iter_al_final(iter->iter_actual)) return NULL; //hash_iter_al_final <-- sebas no entiendo este comentario, que tiene que ver 
-	                                                        // si estoy al final del hash, lo que importa es si estoy al final de la lista
-
 	campo_t* campo =lista_iter_ver_actual(iter->iter_actual);
+	if(!campo) return NULL;
 	return campo->clave;
 }
 
 bool hash_iter_al_final(const hash_iter_t* iter){
-	size_t i = _encontrar_lista_no_vacia(iter->hash->tabla,iter->pos,iter->hash->tamanio);
-	if (i == iter->pos) return true;
-	return false;
+	if(!lista_iter_al_final(iter->iter_actual)){
+		return false;
+	}
+	size_t new_pos = _encontrar_lista_no_vacia(iter->hash->tabla,iter->pos,iter->hash->tamanio);
+	if (new_pos != iter->pos) return false; //para en el null de la ultima lista no vacia
+	return true;
 }
 
 void hash_iter_destruir(hash_iter_t* iter){
