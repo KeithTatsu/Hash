@@ -77,14 +77,15 @@ campo_t* crear_campo(const char* clave, void* dato){
 
 	if(!campo_nuevo) return NULL;
 
-	campo_nuevo->clave = malloc(strlen(clave)*sizeof(char));
+	char* clave_aux = malloc((strlen(clave)+1)*sizeof(char));
 
-	if(!campo_nuevo->clave){
+	if(!clave_aux){
 		free(campo_nuevo);
 		return NULL;
 	}
 
-	strcpy(campo_nuevo->clave, clave);
+	strcpy(clave_aux, clave);
+	campo_nuevo->clave = clave_aux;
 	campo_nuevo->dato = dato;
 
 	return campo_nuevo;
@@ -132,12 +133,13 @@ bool insertar_en_tabla(lista_t* tabla, const char* clave, void* dato){
 	return lista_insertar_ultimo(tabla, campo);
 }
 
-bool pasar_datos(hash_t* hash, lista_t** tabla_nueva){
+bool pasar_datos(hash_t* hash, lista_t** tabla_nueva, size_t tam_nuevo){
 
 	for(size_t i = 0; i < hash->tamanio; i++){
 		while(!lista_esta_vacia(hash->tabla[i])){
 			campo_t* campo = lista_borrar_primero(hash->tabla[i]);
-			if(!insertar_en_tabla(tabla_nueva[i], campo->clave, campo->dato)){
+			size_t pos = hash_f(campo->clave, tam_nuevo);
+			if(!insertar_en_tabla(tabla_nueva[pos], campo->clave, campo->dato)){
 				for(size_t j = 0; j < i; j++){
 					lista_destruir(tabla_nueva[j], hash->destruir);
 				}
@@ -146,6 +148,8 @@ bool pasar_datos(hash_t* hash, lista_t** tabla_nueva){
 		}
 		lista_destruir(hash->tabla[i], NULL);
 	}
+
+	free(hash->tabla);
 
 	return true;
 }
@@ -176,7 +180,9 @@ lista_t** redimensionar_hash(hash_t* hash, size_t tam_nuevo){
 		return hash->tabla;
 	}
 
-	if(!pasar_datos(hash, tabla_nueva)) return hash->tabla;
+	if(!pasar_datos(hash, tabla_nueva, tam_nuevo)) return hash->tabla;
+
+	hash->tamanio = tam_nuevo;
 
 	return tabla_nueva;
 }
@@ -268,6 +274,7 @@ void *hash_borrar(hash_t *hash, const char *clave){
 
 	void* dato = campo_actual->dato;
 	hash->ocupados--;
+	free(campo_actual->clave);
 	free(campo_actual);
 
 	return dato;
@@ -310,6 +317,7 @@ void hash_destruir(hash_t *hash){
 			if(hash->destruir != NULL){
 				free(campo->dato);
 			}
+			free(campo->clave);
 			free(campo);
 		}
 		lista_destruir(hash->tabla[i], NULL);
