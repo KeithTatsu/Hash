@@ -9,9 +9,10 @@ run: compile
 	./$(EXEC)
 
 valgrind: compile
-	valgrind ./$(EXEC) --track-origins=yes --leak-cheak=full
+	valgrind --track-origins=yes --leak-check=full ./$(EXEC) 
 
 gdb: compile
 	gdb ./$(EXEC) -tui
+
 gui:compile
 	gdbgui ./$(EXEC)
