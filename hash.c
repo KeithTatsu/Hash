@@ -22,7 +22,7 @@ static unsigned long sdbm(unsigned char *str)
 
         return hash;
     }
-    */
+    *//*
 size_t hash_f(const char *clave, size_t tam){
 
 	size_t hash_v = tam, i = 0;
@@ -35,6 +35,17 @@ size_t hash_f(const char *clave, size_t tam){
 	}
 
 	return hash_v%tam;
+}
+*/
+unsigned long hash_f(const char *str){
+
+    unsigned long hash = 5381;
+    int c;
+
+    while((c = *str++))
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+
+    return hash;
 }
 
 typedef struct campo{
@@ -65,7 +76,7 @@ campo_t* crear_campo(const char* clave, void* dato){
 	campo_t* campo_nuevo = malloc(sizeof(campo_t));
 
 	if(!campo_nuevo) return NULL;
-	
+
 	campo_nuevo->clave = clave;
 	campo_nuevo->dato = dato;
 
@@ -87,6 +98,8 @@ campo_t* buscar_clave(lista_t* tabla, const char* clave){
 		}
 		lista_iter_avanzar(iter_lista);
 	}
+
+	lista_iter_destruir(iter_lista);	
 
 	return NULL;
 }
@@ -135,9 +148,19 @@ bool pasar_datos(hash_t* hash, lista_t** tabla_nueva){
 			lista_iter_avanzar(iter_lista);
 		}
 		lista_iter_destruir(iter_lista);
+		lista_destruir(hash->tabla[i], NULL);
 	}
 
 	return true;
+}
+
+void free_tabla(lista_t** tabla, size_t tam){
+
+	for(size_t i = 0; i < tam; i++){
+		lista_destruir(tabla[i], free);
+	}
+
+	free(tabla);
 }
 
 bool inicializar_tabla(lista_t** tabla, size_t tam){
@@ -167,6 +190,8 @@ lista_t** redimensionar_hash(hash_t* hash, size_t tam_nuevo){
 	}
 
 	if(!pasar_datos(hash, tabla_nueva)) return hash->tabla;
+
+//	free_tabla(hash->tabla, hash->tamanio);
 
 	return tabla_nueva;
 }
@@ -203,7 +228,7 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 		hash->tabla = redimensionar_hash(hash, tam_nuevo);
 	}
 
-	size_t pos = hash_f(clave, hash->tamanio);
+	unsigned long pos = hash_f(clave)%hash->tamanio;
 
 	if(hash_pertenece(hash, clave)){
 		insertar_existente(hash->tabla[pos], clave, dato, hash->destruir);
@@ -228,30 +253,24 @@ void *hash_borrar(hash_t *hash, const char *clave){
 		}
 	}
 
-	size_t pos = hash_f(clave, hash->tamanio);
+	unsigned long pos = hash_f(clave)%hash->tamanio;
 
-	lista_iter_t* iter_lista = lista_iter_crear(hash->tabla[pos]);
+	campo_t* campo = buscar_clave(hash->tabla[pos], clave);
 
-	if(!iter_lista) return NULL;
+	if(!campo) return NULL;
 
-	while(!lista_iter_al_final(iter_lista)){
-		campo_t* campo = lista_iter_ver_actual(iter_lista);
-		if(strcmp(campo->clave, clave) == 0){
-			lista_iter_borrar(iter_lista);
-			hash->ocupados--;
-			return campo->dato;
-		}
-		lista_iter_avanzar(iter_lista);
-	}
+	void* dato = campo->dato;
+	hash->ocupados--;
+	free(campo);
 
-	return NULL;
+	return dato;
 }
 
 void *hash_obtener(const hash_t *hash, const char *clave){
 
 	if(hash->ocupados == 0)	return NULL;
 
-	size_t pos = hash_f(clave, hash->tamanio);
+	unsigned long pos = hash_f(clave)%hash->tamanio;
 
 	campo_t* campo = buscar_clave(hash->tabla[pos], clave);
 
@@ -264,7 +283,7 @@ bool hash_pertenece(const hash_t *hash, const char *clave){
 
 	if(hash->ocupados == 0)	return false;
 
-	size_t pos = hash_f(clave, hash->tamanio);
+	unsigned long pos = hash_f(clave)%hash->tamanio;
 
 	campo_t* campo = buscar_clave(hash->tabla[pos], clave);
 
@@ -281,15 +300,14 @@ void hash_destruir(hash_t *hash){
 	campo_t* campo;
 
 	for(size_t i = 0; i < hash->tamanio; i++){
-		if(hash->tabla[i] != NULL){
-			while(!lista_esta_vacia(hash->tabla[i])){
-				campo = lista_borrar_primero(hash->tabla[i]);
-				if(hash->destruir != NULL){
-					free(campo->dato);
-				}
-				free(campo);
+		while(!lista_esta_vacia(hash->tabla[i])){
+			campo = lista_borrar_primero(hash->tabla[i]);
+			if(hash->destruir != NULL){
+				free(campo->dato);
 			}
+			free(campo);
 		}
+		lista_destruir(hash->tabla[i], NULL);
 	}
 
 	free(hash);
