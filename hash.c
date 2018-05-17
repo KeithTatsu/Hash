@@ -340,9 +340,10 @@ void hash_destruir(hash_t *hash){
 /*ITERADOR*/
 
 size_t _encontrar_lista_no_vacia(lista_t** tabla,size_t pos,size_t tamanio){
-	
+
 	size_t new_pos = pos;
-	while(lista_esta_vacia(tabla[new_pos])){
+	while(new_pos < tamanio){									//cambiado
+		if(!lista_esta_vacia(tabla[new_pos])) return new_pos; //agregada esta linea
 		++new_pos;
 		if((tamanio-1) <= new_pos) return pos;// pos seria la ubicacion de la ultima lista, la misma, estoy al final
 	}
@@ -368,22 +369,49 @@ hash_iter_t *hash_iter_crear(const hash_t* hash){
 
 bool hash_iter_avanzar(hash_iter_t* iter){
 	if(hash_iter_al_final(iter)) return false;
-	
+/*	
 	if(!lista_iter_al_final(iter->iter_actual)){
 		lista_iter_avanzar(iter->iter_actual);
+		if(lista_iter_al_final(iter->iter_actual)){
+			size_t new_pos = _encontrar_lista_no_vacia(iter->hash->tabla,iter->pos+1,iter->hash->tamanio);
+			lista_iter_t* lista_iter = lista_iter_crear(iter->hash->tabla[new_pos]);
+			if(!lista_iter) return false;
+			free(iter->iter_actual);
+	
+			iter->iter_actual = lista_iter;
+			iter->pos = new_pos;
+		}
 		return true;
 	}		
-	size_t new_pos = _encontrar_lista_no_vacia(iter->hash->tabla,iter->pos,iter->hash->tamanio);
+	size_t new_pos = _encontrar_lista_no_vacia(iter->hash->tabla,iter->pos+1,iter->hash->tamanio);
 	lista_iter_t* lista_iter = lista_iter_crear(iter->hash->tabla[new_pos]);
 	if(!lista_iter) return false;
 	free(iter->iter_actual);
 	
 	iter->iter_actual = lista_iter;
 	iter->pos = new_pos;
-	return true;																
+	return true;
+*/
+
+	lista_iter_avanzar(iter->iter_actual);
+
+	if(lista_iter_al_final(iter->iter_actual)){
+		size_t new_pos = _encontrar_lista_no_vacia(iter->hash->tabla,iter->pos+1,iter->hash->tamanio);
+		if(new_pos >= iter->hash->tamanio) return false;
+		lista_iter_t* lista_iter = lista_iter_crear(iter->hash->tabla[new_pos]);
+		if(!lista_iter) return false;
+		lista_iter_destruir(iter->iter_actual);
+	
+		iter->iter_actual = lista_iter;
+		iter->pos = new_pos;
+	}
+
+	return true;
 }
 
 const char *hash_iter_ver_actual(const hash_iter_t *iter){
+
+	if(hash_iter_al_final(iter)) return NULL;
 
 	campo_t* campo =lista_iter_ver_actual(iter->iter_actual);
 	if(!campo) return NULL;
