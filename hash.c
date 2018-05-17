@@ -3,51 +3,13 @@
 #include "lista.h"
 #include "hash.h"
 
-#define TAM_INICIAL 103 //MIENTRAS MAS GRANDE EL NUMERO PRIMO MAS RAPIDO
+#define TAM_INICIAL 103
 #define TAM_AGRANDAR 2
 #define TAM_ACHICAR 4
 #define PORCENTAJE_AGRANDAR 70
 #define PORCENTAJE_ACHICAR 20
 #define RELACION_LISTAS_TAM 20
 
-/* POSIBLES FUNCIONES HASH
-
-static size_t sdbm(unsigned char *str)
-    {
-        size_t hash = 0;
-        int c;
-
-        while (c = *str++)
-            hash = c + (hash << 6) + (hash << 16) - hash;
-
-        return hash;
-    }
-    */
-size_t hash_f(const char *clave, size_t tam){
-
-	size_t hash_v = tam, i = 0;
-	int c;
-
-	while(clave[i] != '\0'){
-		c = clave[i];
-		hash_v = ((hash_v << 5) + hash_v) + c; // hash * 33 + c 
-		i++;
-	}
-
-	return hash_v%tam;
-}
-/*
-size_t hash_f(const char *str){
-
-    size_t hash = 5381;
-    int c;
-
-    while((c = *str++))
-        hash = ((hash << 5) + hash) + c; // hash * 33 + c 
-
-    return hash;
-}
-*/
 typedef struct campo{
 	char* clave;
 	void* dato;
@@ -65,6 +27,20 @@ struct hash_iter{
 	const hash_t* hash;
 	lista_iter_t* iter_actual;
 };
+
+size_t hash_f(const char *clave, size_t tam){
+
+	size_t hash_v = tam, i = 0;
+	int c;
+
+	while(clave[i] != '\0'){
+		c = clave[i];
+		hash_v = ((hash_v << 5) + hash_v) + c; // hash * 33 + c 
+		i++;
+	}
+
+	return hash_v%tam;
+}
 
 size_t calcular_porcentaje(size_t ocupados, size_t tamanio){
 
@@ -140,11 +116,16 @@ bool pasar_datos(hash_t* hash, lista_t** tabla_nueva, size_t tam_nuevo){
 			campo_t* campo = lista_borrar_primero(hash->tabla[i]);
 			size_t pos = hash_f(campo->clave, tam_nuevo);
 			if(!insertar_en_tabla(tabla_nueva[pos], campo->clave, campo->dato)){
-				for(size_t j = 0; j < i; j++){
-					lista_destruir(tabla_nueva[j], hash->destruir);
+				for(size_t j = 0; j < tam_nuevo; j++){
+					if(tabla_nueva[j] != NULL){
+						lista_destruir(tabla_nueva[j], hash->destruir);
+					}
 				}
+				free(tabla_nueva);
 				return false;
 			}
+			free(campo->clave);
+			free(campo);
 		}
 		lista_destruir(hash->tabla[i], NULL);
 	}
@@ -257,7 +238,7 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 
 void *hash_borrar(hash_t *hash, const char *clave){
 
-	if(!hash || hash->ocupados == 0) return NULL;
+	if(hash->ocupados == 0) return NULL;
 
 	if(calcular_porcentaje(hash->ocupados, hash->tamanio) <= PORCENTAJE_ACHICAR){
 		if(hash->tamanio > TAM_INICIAL){
@@ -331,8 +312,8 @@ void hash_destruir(hash_t *hash){
 size_t _encontrar_lista_no_vacia(lista_t** tabla,size_t pos,size_t tamanio){
 
 	size_t new_pos = pos;
-	while(new_pos < tamanio){									//cambiado
-		if(!lista_esta_vacia(tabla[new_pos])) return new_pos; //agregada esta linea
+	while(new_pos < tamanio){
+		if(!lista_esta_vacia(tabla[new_pos])) return new_pos;
 		++new_pos;
 		if(new_pos == tamanio) return pos;// pos seria la ubicacion de la ultima lista, la misma, estoy al final
 	}
@@ -358,37 +339,18 @@ hash_iter_t *hash_iter_crear(const hash_t* hash){
 
 bool hash_iter_avanzar(hash_iter_t* iter){
 	if(hash_iter_al_final(iter)) return false;
-/*	
-	if(!lista_iter_al_final(iter->iter_actual)){
-		lista_iter_avanzar(iter->iter_actual);
-		if(lista_iter_al_final(iter->iter_actual)){
-			size_t new_pos = _encontrar_lista_no_vacia(iter->hash->tabla,iter->pos+1,iter->hash->tamanio);
-			lista_iter_t* lista_iter = lista_iter_crear(iter->hash->tabla[new_pos]);
-			if(!lista_iter) return false;
-			free(iter->iter_actual);
-	
-			iter->iter_actual = lista_iter;
-			iter->pos = new_pos;
-		}
-		return true;
-	}		
-	size_t new_pos = _encontrar_lista_no_vacia(iter->hash->tabla,iter->pos+1,iter->hash->tamanio);
-	lista_iter_t* lista_iter = lista_iter_crear(iter->hash->tabla[new_pos]);
-	if(!lista_iter) return false;
-	free(iter->iter_actual);
-	
-	iter->iter_actual = lista_iter;
-	iter->pos = new_pos;
-	return true;
-*/
 
 	lista_iter_avanzar(iter->iter_actual);
 
 	if(lista_iter_al_final(iter->iter_actual)){
 		size_t new_pos = _encontrar_lista_no_vacia(iter->hash->tabla,iter->pos+1,iter->hash->tamanio);
+
 		if(new_pos >= iter->hash->tamanio) return false;
+
 		lista_iter_t* lista_iter = lista_iter_crear(iter->hash->tabla[new_pos]);
+
 		if(!lista_iter) return false;
+
 		lista_iter_destruir(iter->iter_actual);
 	
 		iter->iter_actual = lista_iter;
