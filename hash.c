@@ -49,7 +49,7 @@ size_t hash_f(const char *str){
 }
 */
 typedef struct campo{
-	const char* clave;
+	char* clave;
 	void* dato;
 }campo_t;
 
@@ -76,14 +76,15 @@ campo_t* crear_campo(const char* clave, void* dato){
 	campo_t* campo_nuevo = malloc(sizeof(campo_t));
 
 	if(!campo_nuevo) return NULL;
-/*
-	size_t largo_clave = strlen(clave);
-	char clave_aux[largo_clave];
-	campo_nuevo->clave = clave_aux;
+
+	campo_nuevo->clave = malloc(strlen(clave)*sizeof(char));
+
+	if(!campo_nuevo->clave){
+		free(campo_nuevo);
+		return NULL;
+	}
 
 	strcpy(campo_nuevo->clave, clave);
-	*/
-	campo_nuevo->clave = clave;
 	campo_nuevo->dato = dato;
 
 	return campo_nuevo;
@@ -325,7 +326,7 @@ size_t _encontrar_lista_no_vacia(lista_t** tabla,size_t pos,size_t tamanio){
 	while(new_pos < tamanio){									//cambiado
 		if(!lista_esta_vacia(tabla[new_pos])) return new_pos; //agregada esta linea
 		++new_pos;
-		if((tamanio-1) <= new_pos) return pos;// pos seria la ubicacion de la ultima lista, la misma, estoy al final
+		if(new_pos == tamanio) return pos;// pos seria la ubicacion de la ultima lista, la misma, estoy al final
 	}
 	return new_pos;
 }
