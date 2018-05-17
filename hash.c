@@ -8,7 +8,7 @@
 #define TAM_ACHICAR 4
 #define PORCENTAJE_AGRANDAR 70
 #define PORCENTAJE_ACHICAR 20
-#define CANT_PROMEDIO 3
+#define RELACION_LISTAS_TAM 20
 
 /* POSIBLES FUNCIONES HASH
 
@@ -55,12 +55,17 @@ struct hash_iter{
 	lista_iter_t* iter_actual;
 };
 
+size_t calcular_porcentaje(size_t ocupados, size_t tamanio){
+
+	return (ocupados/tamanio*RELACION_LISTAS_TAM)*100;
+}
+
 campo_t* crear_campo(const char* clave, void* dato){
 
 	campo_t* campo_nuevo = malloc(sizeof(campo_t));
 
 	if(!campo_nuevo) return NULL;
-
+	
 	campo_nuevo->clave = clave;
 	campo_nuevo->dato = dato;
 
@@ -122,7 +127,7 @@ bool pasar_datos(hash_t* hash, lista_t** tabla_nueva){
 		while(!lista_iter_al_final(iter_lista)){
 			campo_t* campo = lista_iter_ver_actual(iter_lista);
 			if(!insertar_en_tabla(tabla_nueva[i], campo->clave, campo->dato)){
-				for(size_t j = i-1; j > 0; j--){
+				for(size_t j = 0; j < i; j++){
 					lista_destruir(tabla_nueva[j], hash->destruir);
 				}
 				return false;
@@ -139,8 +144,8 @@ bool inicializar_tabla(lista_t** tabla, size_t tam){
 
 	for(size_t i = 0; i < tam; i++){
 		tabla[i] = lista_crear();
-		if(!tabla[i]){// esto anda ??
-			for(size_t j = i; j > 0; j--){
+		if(!tabla[i]){
+			for(size_t j = 0; j < i; j++){
 				lista_destruir(tabla[j], NULL);
 			}
 			return false;
@@ -193,7 +198,7 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 
-	if((100*hash->ocupados)/(hash->tamanio*CANT_PROMEDIO) >= PORCENTAJE_AGRANDAR){
+	if(calcular_porcentaje(hash->ocupados, hash->tamanio) >= PORCENTAJE_AGRANDAR){
 		size_t tam_nuevo = hash->tamanio*TAM_AGRANDAR;
 		hash->tabla = redimensionar_hash(hash, tam_nuevo);
 	}
@@ -216,7 +221,7 @@ void *hash_borrar(hash_t *hash, const char *clave){
 
 	if(!hash || hash->ocupados == 0) return NULL;
 
-	if((100*hash->ocupados)/(hash->tamanio*CANT_PROMEDIO) <= PORCENTAJE_ACHICAR){
+	if(calcular_porcentaje(hash->ocupados, hash->tamanio) <= PORCENTAJE_ACHICAR){
 		if(hash->tamanio > TAM_INICIAL){
 			size_t tam_nuevo = hash->tamanio/TAM_ACHICAR;
 			hash->tabla = redimensionar_hash(hash, tam_nuevo);
@@ -335,6 +340,7 @@ bool hash_iter_avanzar(hash_iter_t* iter){
 	iter->pos = new_pos;
 	return true;																
 }
+
 const char *hash_iter_ver_actual(const hash_iter_t *iter){
 
 	campo_t* campo =lista_iter_ver_actual(iter->iter_actual);
