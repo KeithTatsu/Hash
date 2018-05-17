@@ -317,7 +317,8 @@ void hash_destruir(hash_t *hash){
 
 size_t _encontrar_lista_no_vacia(lista_t** tabla,size_t pos,size_t tamanio){
 	
-	size_t new_pos = pos;
+	if(pos == tamanio) return pos;
+	size_t new_pos = pos+1;
 	while(lista_esta_vacia(tabla[new_pos])){
 		++new_pos;
 		if((tamanio-1) <= new_pos) return pos;// pos seria la ubicacion de la ultima lista, la misma, estoy al final
