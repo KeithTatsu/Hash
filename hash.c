@@ -134,13 +134,6 @@ bool insertar_en_tabla(lista_t* tabla, const char* clave, void* dato){
 bool pasar_datos(hash_t* hash, lista_t** tabla_nueva){
 
 	for(size_t i = 0; i < hash->tamanio; i++){
-/*		lista_iter_t* iter_lista = lista_iter_crear(hash->tabla[i]);
-
-		if(!iter_lista){
-			free(tabla_nueva);
-			return false;
-		}
-*/
 		while(!lista_esta_vacia(hash->tabla[i])){
 			campo_t* campo = lista_borrar_primero(hash->tabla[i]);
 			if(!insertar_en_tabla(tabla_nueva[i], campo->clave, campo->dato)){
@@ -149,24 +142,13 @@ bool pasar_datos(hash_t* hash, lista_t** tabla_nueva){
 				}
 				return false;
 			}
-//			lista_iter_avanzar(iter_lista);
 		}
-//		lista_iter_destruir(iter_lista);
 		lista_destruir(hash->tabla[i], NULL);
 	}
 
 	return true;
 }
-/*
-void free_tabla(lista_t** tabla, size_t tam){
 
-	for(size_t i = 0; i < tam; i++){
-		lista_destruir(tabla[i], free);
-	}
-
-	free(tabla);
-}
-*/
 bool inicializar_tabla(lista_t** tabla, size_t tam){
 
 	for(size_t i = 0; i < tam; i++){
@@ -194,8 +176,6 @@ lista_t** redimensionar_hash(hash_t* hash, size_t tam_nuevo){
 	}
 
 	if(!pasar_datos(hash, tabla_nueva)) return hash->tabla;
-
-//	free_tabla(hash->tabla, hash->tamanio);
 
 	return tabla_nueva;
 }
@@ -248,12 +228,12 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 }
 
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
-/*
+
 	if(calcular_porcentaje(hash->ocupados, hash->tamanio) >= PORCENTAJE_AGRANDAR){
 		size_t tam_nuevo = hash->tamanio*TAM_AGRANDAR;
 		hash->tabla = redimensionar_hash(hash, tam_nuevo);
 	}
-*/
+
 	size_t pos = hash_f(clave, hash->tamanio);
 
 	if(hash_pertenece(hash, clave)){
@@ -333,7 +313,7 @@ void hash_destruir(hash_t *hash){
 		}
 		lista_destruir(hash->tabla[i], NULL);
 	}
-
+	free(hash->tabla);
 	free(hash);
 }
 
