@@ -12,9 +12,9 @@
 
 /* POSIBLES FUNCIONES HASH
 
-static unsigned long sdbm(unsigned char *str)
+static size_t sdbm(unsigned char *str)
     {
-        unsigned long hash = 0;
+        size_t hash = 0;
         int c;
 
         while (c = *str++)
@@ -22,7 +22,7 @@ static unsigned long sdbm(unsigned char *str)
 
         return hash;
     }
-    *//*
+    */
 size_t hash_f(const char *clave, size_t tam){
 
 	size_t hash_v = tam, i = 0;
@@ -36,18 +36,18 @@ size_t hash_f(const char *clave, size_t tam){
 
 	return hash_v%tam;
 }
-*/
-unsigned long hash_f(const char *str){
+/*
+size_t hash_f(const char *str){
 
-    unsigned long hash = 5381;
+    size_t hash = 5381;
     int c;
 
     while((c = *str++))
-        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+        hash = ((hash << 5) + hash) + c; // hash * 33 + c 
 
     return hash;
 }
-
+*/
 typedef struct campo{
 	const char* clave;
 	void* dato;
@@ -76,7 +76,13 @@ campo_t* crear_campo(const char* clave, void* dato){
 	campo_t* campo_nuevo = malloc(sizeof(campo_t));
 
 	if(!campo_nuevo) return NULL;
+/*
+	size_t largo_clave = strlen(clave);
+	char clave_aux[largo_clave];
+	campo_nuevo->clave = clave_aux;
 
+	strcpy(campo_nuevo->clave, clave);
+	*/
 	campo_nuevo->clave = clave;
 	campo_nuevo->dato = dato;
 
@@ -85,20 +91,18 @@ campo_t* crear_campo(const char* clave, void* dato){
 
 campo_t* buscar_clave(lista_t* tabla, const char* clave){
 
-	campo_t* campo_actual;
 	lista_iter_t* iter_lista = lista_iter_crear(tabla);
 
 	if(!iter_lista) return NULL;
 
 	while(!lista_iter_al_final(iter_lista)){
-		campo_actual = lista_iter_ver_actual(iter_lista);
+		campo_t* campo_actual = lista_iter_ver_actual(iter_lista);
 		if(strcmp(campo_actual->clave, clave) == 0){
 			lista_iter_destruir(iter_lista);
 			return campo_actual;
 		}
 		lista_iter_avanzar(iter_lista);
 	}
-
 	lista_iter_destruir(iter_lista);	
 
 	return NULL;
@@ -130,30 +134,30 @@ bool insertar_en_tabla(lista_t* tabla, const char* clave, void* dato){
 bool pasar_datos(hash_t* hash, lista_t** tabla_nueva){
 
 	for(size_t i = 0; i < hash->tamanio; i++){
-		lista_iter_t* iter_lista = lista_iter_crear(hash->tabla[i]);
+/*		lista_iter_t* iter_lista = lista_iter_crear(hash->tabla[i]);
 
 		if(!iter_lista){
 			free(tabla_nueva);
 			return false;
 		}
-
-		while(!lista_iter_al_final(iter_lista)){
-			campo_t* campo = lista_iter_ver_actual(iter_lista);
+*/
+		while(!lista_esta_vacia(hash->tabla[i])){
+			campo_t* campo = lista_borrar_primero(hash->tabla[i]);
 			if(!insertar_en_tabla(tabla_nueva[i], campo->clave, campo->dato)){
 				for(size_t j = 0; j < i; j++){
 					lista_destruir(tabla_nueva[j], hash->destruir);
 				}
 				return false;
 			}
-			lista_iter_avanzar(iter_lista);
+//			lista_iter_avanzar(iter_lista);
 		}
-		lista_iter_destruir(iter_lista);
+//		lista_iter_destruir(iter_lista);
 		lista_destruir(hash->tabla[i], NULL);
 	}
 
 	return true;
 }
-
+/*
 void free_tabla(lista_t** tabla, size_t tam){
 
 	for(size_t i = 0; i < tam; i++){
@@ -162,7 +166,7 @@ void free_tabla(lista_t** tabla, size_t tam){
 
 	free(tabla);
 }
-
+*/
 bool inicializar_tabla(lista_t** tabla, size_t tam){
 
 	for(size_t i = 0; i < tam; i++){
@@ -196,6 +200,28 @@ lista_t** redimensionar_hash(hash_t* hash, size_t tam_nuevo){
 	return tabla_nueva;
 }
 
+campo_t* _borrar_elemento(lista_t* tabla, const char* clave){
+
+	lista_iter_t* iter_lista = lista_iter_crear(tabla);
+
+	if(!iter_lista) return NULL;
+
+	while(!lista_iter_al_final(iter_lista)){
+		campo_t* campo_actual = lista_iter_ver_actual(iter_lista);
+		if(strcmp(campo_actual->clave, clave) == 0){
+			campo_actual = lista_iter_borrar(iter_lista);
+			lista_iter_destruir(iter_lista);
+
+			return campo_actual;
+		}
+		lista_iter_avanzar(iter_lista);
+	}
+
+	lista_iter_destruir(iter_lista);
+
+	return NULL;
+}
+
 hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 
 	hash_t* hash_nuevo = malloc(sizeof(hash_t));
@@ -222,13 +248,13 @@ hash_t *hash_crear(hash_destruir_dato_t destruir_dato){
 }
 
 bool hash_guardar(hash_t *hash, const char *clave, void *dato){
-
+/*
 	if(calcular_porcentaje(hash->ocupados, hash->tamanio) >= PORCENTAJE_AGRANDAR){
 		size_t tam_nuevo = hash->tamanio*TAM_AGRANDAR;
 		hash->tabla = redimensionar_hash(hash, tam_nuevo);
 	}
-
-	unsigned long pos = hash_f(clave)%hash->tamanio;
+*/
+	size_t pos = hash_f(clave, hash->tamanio);
 
 	if(hash_pertenece(hash, clave)){
 		insertar_existente(hash->tabla[pos], clave, dato, hash->destruir);
@@ -253,15 +279,15 @@ void *hash_borrar(hash_t *hash, const char *clave){
 		}
 	}
 
-	unsigned long pos = hash_f(clave)%hash->tamanio;
+	size_t pos = hash_f(clave, hash->tamanio);
 
-	campo_t* campo = buscar_clave(hash->tabla[pos], clave);
+	campo_t* campo_actual = _borrar_elemento(hash->tabla[pos], clave);
 
-	if(!campo) return NULL;
+	if(!campo_actual) return NULL;
 
-	void* dato = campo->dato;
+	void* dato = campo_actual->dato;
 	hash->ocupados--;
-	free(campo);
+	free(campo_actual);
 
 	return dato;
 }
@@ -270,7 +296,7 @@ void *hash_obtener(const hash_t *hash, const char *clave){
 
 	if(hash->ocupados == 0)	return NULL;
 
-	unsigned long pos = hash_f(clave)%hash->tamanio;
+	size_t pos = hash_f(clave, hash->tamanio);
 
 	campo_t* campo = buscar_clave(hash->tabla[pos], clave);
 
@@ -283,7 +309,7 @@ bool hash_pertenece(const hash_t *hash, const char *clave){
 
 	if(hash->ocupados == 0)	return false;
 
-	unsigned long pos = hash_f(clave)%hash->tamanio;
+	size_t pos = hash_f(clave, hash->tamanio);
 
 	campo_t* campo = buscar_clave(hash->tabla[pos], clave);
 
@@ -297,11 +323,9 @@ size_t hash_cantidad(const hash_t *hash){
 
 void hash_destruir(hash_t *hash){
 
-	campo_t* campo;
-
 	for(size_t i = 0; i < hash->tamanio; i++){
 		while(!lista_esta_vacia(hash->tabla[i])){
-			campo = lista_borrar_primero(hash->tabla[i]);
+			campo_t* campo = lista_borrar_primero(hash->tabla[i]);
 			if(hash->destruir != NULL){
 				free(campo->dato);
 			}
@@ -317,8 +341,7 @@ void hash_destruir(hash_t *hash){
 
 size_t _encontrar_lista_no_vacia(lista_t** tabla,size_t pos,size_t tamanio){
 	
-	if(pos == tamanio) return pos;
-	size_t new_pos = pos+1;
+	size_t new_pos = pos;
 	while(lista_esta_vacia(tabla[new_pos])){
 		++new_pos;
 		if((tamanio-1) <= new_pos) return pos;// pos seria la ubicacion de la ultima lista, la misma, estoy al final
