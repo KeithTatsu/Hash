@@ -9,6 +9,7 @@
 #define PORCENTAJE_AGRANDAR 70
 #define PORCENTAJE_ACHICAR 20
 #define RELACION_LISTAS_TAM 20
+#define POS_INICIAL 0
 
 typedef struct campo{
 	char* clave;
@@ -92,7 +93,7 @@ bool insertar_existente(lista_t* tabla, const char* clave, void* dato, hash_dest
 
 	if(destruir){
 		void* dato_aux = campo->dato;
-		free(dato_aux);
+		destruir(dato_aux);
 	}
 
 	campo->dato = dato;
@@ -121,7 +122,6 @@ bool pasar_datos(hash_t* hash, lista_t** tabla_nueva, size_t tam_nuevo){
 						lista_destruir(tabla_nueva[j], hash->destruir);
 					}
 				}
-				free(tabla_nueva);
 				return false;
 			}
 			free(campo->clave);
@@ -129,8 +129,6 @@ bool pasar_datos(hash_t* hash, lista_t** tabla_nueva, size_t tam_nuevo){
 		}
 		lista_destruir(hash->tabla[i], NULL);
 	}
-
-	free(hash->tabla);
 
 	return true;
 }
@@ -150,22 +148,28 @@ bool inicializar_tabla(lista_t** tabla, size_t tam){
 	return true;
 }
 
-lista_t** redimensionar_hash(hash_t* hash, size_t tam_nuevo){
+bool redimensionar_hash(hash_t* hash, size_t tam_nuevo){
 
 	lista_t** tabla_nueva = malloc(tam_nuevo*sizeof(lista_t*));
 
-	if(!tabla_nueva) return hash->tabla;
+	if(!tabla_nueva) return false;
 
 	if(!inicializar_tabla(tabla_nueva, tam_nuevo)){
 		free(tabla_nueva);
-		return hash->tabla;
+		return false;
 	}
 
-	if(!pasar_datos(hash, tabla_nueva, tam_nuevo)) return hash->tabla;
+	if(!pasar_datos(hash, tabla_nueva, tam_nuevo)){
+		free(tabla_nueva);
+		return false;
+	}
+
+	free(hash->tabla);
 
 	hash->tamanio = tam_nuevo;
+	hash->tabla = tabla_nueva;
 
-	return tabla_nueva;
+	return true;
 }
 
 campo_t* _borrar_elemento(lista_t* tabla, const char* clave){
@@ -219,7 +223,7 @@ bool hash_guardar(hash_t *hash, const char *clave, void *dato){
 
 	if(calcular_porcentaje(hash->ocupados, hash->tamanio) >= PORCENTAJE_AGRANDAR){
 		size_t tam_nuevo = hash->tamanio*TAM_AGRANDAR;
-		hash->tabla = redimensionar_hash(hash, tam_nuevo);
+		if(!redimensionar_hash(hash, tam_nuevo)) return false;
 	}
 
 	size_t pos = hash_f(clave, hash->tamanio);
@@ -243,7 +247,7 @@ void *hash_borrar(hash_t *hash, const char *clave){
 	if(calcular_porcentaje(hash->ocupados, hash->tamanio) <= PORCENTAJE_ACHICAR){
 		if(hash->tamanio > TAM_INICIAL){
 			size_t tam_nuevo = hash->tamanio/TAM_ACHICAR;
-			hash->tabla = redimensionar_hash(hash, tam_nuevo);
+			redimensionar_hash(hash, tam_nuevo);
 		}
 	}
 
@@ -311,13 +315,13 @@ void hash_destruir(hash_t *hash){
 
 size_t _encontrar_lista_no_vacia(lista_t** tabla,size_t pos,size_t tamanio){
 
-	size_t new_pos = pos;
-	while(new_pos < tamanio){
-		if(!lista_esta_vacia(tabla[new_pos])) return new_pos;
-		++new_pos;
-		if(new_pos == tamanio) return pos;// pos seria la ubicacion de la ultima lista, la misma, estoy al final
+	size_t nueva_pos = pos;
+	while(nueva_pos < tamanio){
+		++nueva_pos;
+		if(nueva_pos == tamanio) return nueva_pos-1;// pos seria la ubicacion de la ultima lista, la misma, estoy al final
+		if(!lista_esta_vacia(tabla[nueva_pos])) return nueva_pos;
 	}
-	return new_pos;
+	return nueva_pos;
 }
 
 hash_iter_t *hash_iter_crear(const hash_t* hash){
@@ -326,7 +330,7 @@ hash_iter_t *hash_iter_crear(const hash_t* hash){
 	if (!hash_iter) return NULL;
 	hash_iter->hash = hash;
 
-	size_t i = _encontrar_lista_no_vacia(hash->tabla,0,hash->tamanio);// el cero , numero magico  usar define
+	size_t i = _encontrar_lista_no_vacia(hash->tabla,POS_INICIAL,hash->tamanio);
 	hash_iter->pos = i;
 
 	hash_iter->iter_actual = lista_iter_crear(hash->tabla[i]);	
@@ -343,18 +347,18 @@ bool hash_iter_avanzar(hash_iter_t* iter){
 	lista_iter_avanzar(iter->iter_actual);
 
 	if(lista_iter_al_final(iter->iter_actual)){
-		size_t new_pos = _encontrar_lista_no_vacia(iter->hash->tabla,iter->pos+1,iter->hash->tamanio);
+		size_t nueva_pos = _encontrar_lista_no_vacia(iter->hash->tabla,iter->pos,iter->hash->tamanio);
 
-		if(new_pos >= iter->hash->tamanio) return false;
+		if(nueva_pos >= iter->hash->tamanio) return false;
 
-		lista_iter_t* lista_iter = lista_iter_crear(iter->hash->tabla[new_pos]);
+		lista_iter_t* lista_iter = lista_iter_crear(iter->hash->tabla[nueva_pos]);
 
 		if(!lista_iter) return false;
 
 		lista_iter_destruir(iter->iter_actual);
 	
 		iter->iter_actual = lista_iter;
-		iter->pos = new_pos;
+		iter->pos = nueva_pos;
 	}
 
 	return true;
@@ -370,12 +374,8 @@ const char *hash_iter_ver_actual(const hash_iter_t *iter){
 }
 
 bool hash_iter_al_final(const hash_iter_t* iter){
-	if(!lista_iter_al_final(iter->iter_actual)){
-		return false;
-	}
-	size_t new_pos = _encontrar_lista_no_vacia(iter->hash->tabla,iter->pos,iter->hash->tamanio);
-	if (new_pos != iter->pos) return false; //para en el null de la ultima lista no vacia
-	return true;
+	
+	return (iter->pos == iter->hash->tamanio-1);
 }
 
 void hash_iter_destruir(hash_iter_t* iter){
